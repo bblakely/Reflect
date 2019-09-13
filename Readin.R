@@ -33,11 +33,6 @@ TS<-data.frame(cbind(dectime,H, M, S))
 sr.wave<-sr.raw[,1]
 sr.num<-(t(sr.raw[2:ncol(sr.raw)]));colnames(sr.num)<-paste('b',sr.wave, sep="")
 
-# 
-# par(mfrow=c(3,3)) #quick check for reasonable spectra
-# for(i in sample(1:nrow(sr.num), 18)){
-#   plot(sr.num[i,], type='l')
-# }
 #####
 
 ###Retrieve timestamps from plot splitting files###
@@ -65,6 +60,12 @@ plot.cl.sr<-combine(dat=sr.pure, ts=(TS), split=(ts.split), na.timecol="S")
 #bit of cleanup
 rm('sr.pure','sr.num','TS','ts.split', 'H','M','S', 'sr.ts')
 
+
+
+
+
+
+
 ###Actual plot splitting###
 plotsplit=function(dat, numcol=c(1:3,5:8,11:18), out='mean', noise.tol=200, n.split=4){
   
@@ -82,7 +83,7 @@ plotsplit=function(dat, numcol=c(1:3,5:8,11:18), out='mean', noise.tol=200, n.sp
       count<-count+1
       loc<-which(dat$row==uniquerows[o] & dat$range==uniqueranges[a])
       
-      if(length(loc)==n.split){
+      if(length(loc)==n.split){ #If you have the right number of records
         
         ind<-c(min(loc):max(loc))
         datsub<-dat[ind,]
@@ -97,12 +98,79 @@ plotsplit=function(dat, numcol=c(1:3,5:8,11:18), out='mean', noise.tol=200, n.sp
         
         
         
-      }
+      }else 
+        
+      if (length(loc)<n.split){ #if you don't have enough records to collect the plot
+        print(paste("incomplete data for row", uniquerows[o], "range",  uniqueranges[a]));print(("No resolution :("));print("*****")}
+      
       else{
         
-        if(length(loc)==8){print(paste("row", uniquerows[o], "range", uniqueranges[a], "is doubled"))}
-        else if(length(loc)==0){print(paste("row",uniquerows[o], "range",  uniqueranges[a], "is missing"))}
-        else{print(paste("row",uniquerows[o], "range",  uniqueranges[a], "is irregular;","There are", length(which(dat$row==uniquerows[o] & dat$range==uniqueranges[a])), "records with this label"))}
+        print(paste("row",uniquerows[o], "range",  uniqueranges[a], "is irregular;","There are", length(which(dat$row==uniquerows[o] & dat$range==uniqueranges[a])), "records with this label"))
+        
+        
+        #if there's only one 'end' or 'start' recording, grab the corresponding start/end
+        if(length(which(dat$io[loc]=='e'))==1){ #if you only have end
+          
+          ends<-loc[which(dat$io[loc]=='e')] #loc at the end record to match
+          tdiff<-abs(dat$dectime[loc]-mean(dat$dectime[loc[which(dat$io[loc]=='e')]]));tdiff[tdiff==0]<-NA #tdiff are the time differences; NaN out zeroes because those are the end times
+          starts<-loc[which(tdiff==min(tdiff, na.rm=TRUE))] #which record is closest to the end times
+          
+          if(!is.finite(min(tdiff, na.rm=TRUE))){print(paste("check row", uniquerows[o], "range", uniqueranges[a]))}
+          
+          loc.rep<-c(starts, ends)
+          
+          
+          print(paste("row", uniquerows[o], "range", uniqueranges[a], "is resolved by matching single end record"))
+          print('*****')
+          
+        }else
+        
+        #if there's only one start and multiple ends (probably rare), same procedure
+        if(length(which(dat$io[loc]=='s'))==1){ #if you only have end
+          
+          ends<-loc[which(dat$io[loc]=='s')] 
+          tdiff<-abs(dat$dectime[loc]-mean(dat$dectime[loc[which(dat$io[loc]=='s')]]));tdiff[tdiff==0]<-NA #tdiff are the time differences; NaN out zeroes because those are the end times
+          starts<-loc[which(tdiff==min(tdiff, na.rm=TRUE))] #which record is closest 
+          
+          if(!is.finite(min(tdiff, na.rm=TRUE))){print(paste("check row", uniquerows[o], "range", uniqueranges[a]))}
+          
+          loc.rep<-c(starts, ends)
+          
+          print(paste("row", uniquerows[o], "range", uniqueranges[a], "is resolved by matching single start record"))
+          print('*****')
+        }else
+        
+          
+        #if there are multiple starts and ends, pick the latest end and the matching start
+        if(length(which(dat$io[loc]=='s'))>1 & length(which(dat$io[loc]=='e'))>1){
+          
+          
+          ends<-loc[which(dat$dectime[loc]==max(dat$dectime[loc[which(dat$io[loc]=='e')]]))]
+          tdiff<-(dat$dectime[loc[which(dat$io[loc]=='s')]])-dat$dectime[ends]
+          starts<-loc[which(tdiff==max(tdiff[tdiff<0]))] #which record is closest, but still before 
+        
+          loc.rep<-c(starts, ends)
+          
+          print(paste("row", uniquerows[o], "range", uniqueranges[a], "is resolved by finding latest pair of records"))
+          print('*****')
+          
+        }else{print ("No resolution :(");print("*****")}
+        
+      
+        
+        
+        
+        #Now do the thing you do for normal records with the corrected timestamps
+        ind<-c(min(loc.rep):max(loc.rep))
+        datsub<-dat[ind,]
+        
+        datcount<-length(which(!is.na(rowMeans(datsub[,numcol]))))
+        datlab<-c(uniquerows[o],uniqueranges[a], datcount);names(datlab)<-c('row', 'range', 'reccount')
+        
+        
+        #bigdf<-rbind(bigdf, datsub)
+        meandf[count,]<-c(datlab, colMeans(datsub[,numcol], na.rm=TRUE))
+        
         
       }
     }
@@ -164,3 +232,4 @@ if(exists('ul.lw.mean')&exists('dl.lw.mean')&lam=="long"){
 }
 
 #Combine the spectra
+
