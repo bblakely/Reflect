@@ -232,4 +232,37 @@ if(exists('ul.lw.mean')&exists('dl.lw.mean')&lam=="long"){
 }
 
 #Combine the spectra
+#might be a better way, but I'm just gonna do piecewse
+
+ovlp.sw.ind<-which(colnames(refl.sw)%in%colnames(refl.lw));ovlp.lw.ind<-which(colnames(refl.lw)%in%colnames(refl.sw))
+
+sw.onl<-refl.sw[,(1:(min(ovlp.sw.ind[1])-1))] #wavelengths only in the shortwave
+
+#merge by weighted means
+ovlp.sw<-refl.sw[ovlp.sw.ind];ovlp.lw<-refl.lw[ovlp.lw.ind]
+
+ovlp<-matrix(data=0,nrow=nrow(ovlp.sw), ncol=ncol(ovlp.sw))
+
+weightvec<-seq(from=0, to=1, length.out=length(ovlp.lw.ind))
+for(l in 1:length(ovlp.sw.ind)){
+  ovlp[,l]<-(ovlp.sw[,l]*(1-weightvec[l]))+(ovlp.lw[,l]*weightvec[l])
+}
+
+ovlp<-data.frame(ovlp);colnames(ovlp)<-colnames(ovlp.lw)
+
+lw.onl<-refl.lw[,(max(ovlp.lw.ind)+1):ncol(refl.lw)]
+
+refl.merge<-cbind(sw.onl,ovlp,lw.onl);sr.wave<-unique(c(sr.wave.sw,sr.wave.lw))
+
+plot(unlist(refl.merge[1,])~sr.wave, col='white', ylim=c(-0.1, 0.9), xlim=c(420,1010))
+for(i in sort(sample(1:nrow(refl.merge), 10))){
+  exists<-!is.na(mean(unlist(refl.merge[i,]),na.rm=TRUE))
+  if(exists==TRUE){
+    lines(unlist(refl.sw[i,])~sr.wave.sw, col='gray', lwd=0.5);
+    lines(unlist(refl.lw[i,])~sr.wave.lw, col='black', lwd=0.5)
+    lines(unlist(refl.merge[i,])~sr.wave, col=colvec[i], lwd=2)
+    }else(print(paste("row ", dl.lw.mean$row[i],',', "range ",dl.lw.mean$range[i], " does not have data", sep='')))
+}
+abline(v=c(max(sr.wave.sw), min(sr.wave.lw)));
+text(c(560,725,890),-0.1, c("SW only <<", ">>    overlap    <<", ">> LW only"))
 
