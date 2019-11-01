@@ -153,10 +153,10 @@ for(i in 1:length(unique(refl.cat))){
   
   nums<-sw.chk[which(refl.cat==unique(refl.cat)[i]& chk.meta$flood==0)]
   ran<-sw.exp[sample(which(dat.re$flood==0), length(nums))]
+
+  hist(nums, main=paste("SW ", unique(refl.cat)[i]), xlab="VIS albedo", xlim=c(0.01, 0.1), ylim=c(0,10),breaks=seq(from=min(nums), to=max(nums), length.out = 10))
   
-  hist(nums, main=paste("SW ", unique(refl.cat)[i]), xlim=c(0.01, 0.1), ylim=c(0,10),breaks=seq(from=min(nums), to=max(nums), length.out = 10))
-  
-  hist(ran, main='random', xlim=c(0.01, 0.1), ylim=c(0,10), breaks=seq(from=min(ran), to=max(ran), length.out = 10))
+  hist(ran, main='random',xlab="VIS albedo", xlim=c(0.01, 0.1), ylim=c(0,10), breaks=seq(from=min(ran), to=max(ran), length.out = 10))
   
   print(paste('mean:', unique(refl.cat)[i],(t.test(nums, ran, var.equal = FALSE)[3])))
   print(paste('var:',unique(refl.cat)[i],(var.test(nums, ran, alternative = 'less')[3])))
@@ -207,4 +207,3 @@ for(i in 1:length(unique(refl.cat))){
 #Well I have better results than row density...
 #####
 
-\]komopjml
